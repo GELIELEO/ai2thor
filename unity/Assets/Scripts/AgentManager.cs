@@ -27,6 +27,7 @@ public class AgentManager : MonoBehaviour
 	private bool renderDepthImage;
 	private bool renderClassImage;
 	private bool renderObjectImage;
+    private bool defaultRenderObjectImage;
 	private bool renderNormalsImage;
     private bool renderFlowImage;
 	private bool synchronousHttp = true;
@@ -44,6 +45,8 @@ public class AgentManager : MonoBehaviour
 
     private PhysicsSceneManager physicsSceneManager;
     public int AdvancePhysicsStepCount = 0;
+
+    public List<Rigidbody> rbsInScene = null;
 
 	void Awake() {
 
@@ -81,10 +84,14 @@ public class AgentManager : MonoBehaviour
 		initializePrimaryAgent();
         primaryAgent.actionDuration = this.actionDuration;
 		readyToEmit = true;
-		Debug.Log("Graphics Tier: " + Graphics.activeTier);
+		//Debug.Log("Graphics Tier: " + Graphics.activeTier);
 		this.agents.Add (primaryAgent);
 
         physicsSceneManager = GameObject.Find("PhysicsSceneManager").GetComponent<PhysicsSceneManager>();
+
+        //cache all rigidbodies that are in the scene by default
+        //NOTE: any rigidbodies created from actions such as Slice/Break or spawned in should be added to this!
+        rbsInScene = new List<Rigidbody>(FindObjectsOfType<Rigidbody>());
 	}
 
 	private void initializePrimaryAgent() {
@@ -117,7 +124,7 @@ public class AgentManager : MonoBehaviour
 		this.renderClassImage = action.renderClassImage;
 		this.renderDepthImage = action.renderDepthImage;
 		this.renderNormalsImage = action.renderNormalsImage;
-		this.renderObjectImage = action.renderObjectImage;
+		this.renderObjectImage = this.defaultRenderObjectImage = action.renderObjectImage;
         this.renderFlowImage = action.renderFlowImage;
 		if (action.alwaysReturnVisibleRange) {
 			((PhysicsRemoteFPSAgentController) primaryAgent).alwaysReturnVisibleRange = action.alwaysReturnVisibleRange;
@@ -125,6 +132,17 @@ public class AgentManager : MonoBehaviour
 		StartCoroutine (addAgents (action));
 
 	}
+
+    //used to add a reference to a rigidbody created after the scene was started
+    public void AddToRBSInScene(Rigidbody rb)
+    {
+        rbsInScene.Add(rb);
+    }
+
+    public void RemoveFromRBSInScene(Rigidbody rb)
+    {
+        rbsInScene.Remove(rb);
+    }
 
     //return reference to primary agent in case we need a reference to the primary
     public BaseFPSAgentController ReturnPrimaryAgent()
@@ -301,21 +319,22 @@ public class AgentManager : MonoBehaviour
 		}
 
         //check what objects in the scene are currently in motion
-        Rigidbody[] rbs = FindObjectsOfType(typeof(Rigidbody)) as Rigidbody[];
-        foreach(Rigidbody rb in rbs)
+        //Rigidbody[] rbs = FindObjectsOfType(typeof(Rigidbody)) as Rigidbody[];
+        foreach(Rigidbody rb in rbsInScene)
         {
             //if this rigidbody is part of a SimObject, calculate rest using lastVelocity/currentVelocity comparisons
-            if(rb.GetComponentInParent<SimObjPhysics>())
+            if(rb.GetComponentInParent<SimObjPhysics>() && rb.transform.gameObject.activeSelf) // make sure the object is actually active, otherwise skip the check
             {
-                
                 SimObjPhysics sop = rb.GetComponentInParent<SimObjPhysics>();
                 
                 float currentVelocity = Math.Abs(rb.angularVelocity.sqrMagnitude + rb.velocity.sqrMagnitude);
                 float accel = (currentVelocity - sop.lastVelocity) / Time.fixedDeltaTime;
 
-                if(accel == 0)
+                if(Mathf.Abs(accel) <= 0.0001f)
                 {
                     sop.inMotion = false;
+                    //print(sop.transform.name + " should be sleeping");
+                    //rb.Sleep(); maybe do something to ensure object has stopped moving, and reduce jitter
                 }
 
                 else
@@ -323,18 +342,48 @@ public class AgentManager : MonoBehaviour
                     //the rb's velocities are not 0, so it is in motion and the scene is not at rest
                     rb.GetComponentInParent<SimObjPhysics>().inMotion = true;
                     physicsSceneManager.isSceneAtRest = false;
+                    // #if UNITY_EDITOR
+                    // print(rb.GetComponentInParent<SimObjPhysics>().name + " is still in motion!");
+                    // #endif
                 }
-
             }
 
             //this rigidbody is not a SimOBject, and might be a piece of a shattered sim object spawned in, or something
             else
             {
-                //is the rigidbody at non zero velocity? then the scene is not at rest
-                if(!(Math.Abs(rb.angularVelocity.sqrMagnitude + 
-                rb.velocity.sqrMagnitude) < 0.001))
+                if(rb.transform.gameObject.activeSelf)
                 {
-                    physicsSceneManager.isSceneAtRest = false;
+                    //is the rigidbody at non zero velocity? then the scene is not at rest
+                    if(!(Math.Abs(rb.angularVelocity.sqrMagnitude + 
+                    rb.velocity.sqrMagnitude) < 0.01))
+                    {
+                        physicsSceneManager.isSceneAtRest = false;
+                        //make sure the rb's drag values are not at 0 exactly
+                        //if(rb.drag < 0.1f)
+                        rb.drag += 0.01f;
+
+                        //if(rb.angularDrag < 0.1f)
+                        //rb.angularDrag = 1.5f;
+                        rb.angularDrag += 0.01f;
+
+                        #if UNITY_EDITOR
+                        print(rb.transform.name + " is still in motion!");
+                        #endif
+                    }
+
+                    //the velocities are small enough, assume object has come to rest and force this one to sleep
+                    else
+                    {
+                        rb.drag = 1.0f;
+                        rb.angularDrag = 1.0f;
+                    }
+
+                    //if the shard/broken piece gets out of bounds somehow and begins falling forever, get rid of it with this check
+                    if(rb.transform.position.y < -50f)
+                    {
+                        rb.transform.gameObject.SetActive(false);
+                        //note: we might want to remove these from the list of rbs at some point but for now it'll be fine
+                    }
                 }
             }
         }
@@ -687,12 +736,15 @@ public class AgentManager : MonoBehaviour
 	private void ProcessControlCommand(string msg)
 	{
 
+        this.renderObjectImage = this.defaultRenderObjectImage;
+
 		ServerAction controlCommand = new ServerAction();
 
 		JsonUtility.FromJsonOverwrite(msg, controlCommand);
 
 		this.currentSequenceId = controlCommand.sequenceId;
 		this.renderImage = controlCommand.renderImage;
+
 		activeAgentId = controlCommand.agentId;
 		if (controlCommand.action == "Reset") {
 			this.Reset (controlCommand);
@@ -703,6 +755,15 @@ public class AgentManager : MonoBehaviour
 		} else if (controlCommand.action == "UpdateThirdPartyCamera") {
 			this.UpdateThirdPartyCamera(controlCommand);
 		} else {
+            // we only allow renderObjectImage to be flipped on 
+            // on a per step() basis, since by default the param is false
+            // so we don't know if a request is meant to turn the param off
+            // or if it is just the value by default
+            if (controlCommand.renderObjectImage) {
+                this.renderObjectImage = true;
+            }
+
+            this.activeAgent().updateImageSynthesis(this.renderDepthImage || this.renderClassImage || this.renderObjectImage || this.renderNormalsImage);
 			this.activeAgent().ProcessControlCommand (controlCommand);
 			readyToEmit = true;
 		}
@@ -806,11 +867,12 @@ public class ObjectMetadata
 	///
 	public bool pickupable;
 	public bool isPickedUp;//if the pickupable object is actively being held by the agent
+    public bool moveable;//if the object is moveable, able to be pushed/affected by physics but is too big to pick up
 
 	public float mass;//mass is only for moveable and pickupable objects
 
 	//salient materials are only for pickupable and moveable objects, for now static only objects do not report material back since we have to assign them manually
-	public enum ObjectSalientMaterial {Metal, Wood, Plastic, Glass, Ceramic, Stone, Fabric, Rubber, Food, Paper, Wax, Soap, Sponge, Organic} //salient materials that make up an object (ie: cell phone - metal, glass)
+	public enum ObjectSalientMaterial {Metal, Wood, Plastic, Glass, Ceramic, Stone, Fabric, Rubber, Food, Paper, Wax, Soap, Sponge, Organic, Leather} //salient materials that make up an object (ie: cell phone - metal, glass)
 
 	public string [] salientMaterials; //salient materials that this object is made of as strings (see enum above). This is only for objects that are Pickupable or Moveable
 	///
@@ -822,16 +884,37 @@ public class ObjectMetadata
 	public string[] parentReceptacles;
 	public float currentTime;
     public bool isMoving;//true if this game object currently has a non-zero velocity
-
-    public WorldSpaceBounds objectBounds;
+    public AxisAlignedBoundingBox axisAlignedBoundingBox;
+    public ObjectOrientedBoundingBox objectOrientedBoundingBox;
+    
 	public ObjectMetadata() { }
 }
 
+//for returning a world axis aligned bounding box
+//if an object is rotated, the dimensions of this box are subject to change
 [Serializable]
-public class WorldSpaceBounds
+public class AxisAlignedBoundingBox
 {
-    //8 corners of the box that bounds a sim object
-    public Vector3[] objectBoundsCorners;
+    //8 corners of the world axis aligned box that bounds a sim object
+    //8 rows - 8 corners, one per row
+    //3 columns - x, y, z of each corner respectively
+    public float[,] cornerPoints = new float[8,3];
+
+    //center of the bounding box of this object in worldspace coordinates
+    public Vector3 center;
+
+    //the size of the bounding box in worldspace coordinates (world x, y, z)
+    public Vector3 size;
+}
+
+//for returning an object oriented bounds not locked to world axes
+//if an object is rotated, this object oriented box will not change dimensions
+[Serializable]
+public class ObjectOrientedBoundingBox
+{
+    //probably return these from the BoundingBox component of the object for now?
+    //this means that it will only work for Pickupable objects at the moment
+    public float[,] cornerPoints = new float[8,3];
 }
 
 [Serializable]
@@ -864,8 +947,8 @@ public class HandMetadata {
 [Serializable]
 public class ObjectTypeCount
 {
-    public string objectType;
-    public int count;
+    public string objectType; //specify object by type in scene
+    public int count; //the total count of objects of type objectType that we will try to make exist in the scene
 }
 
 [Serializable]
@@ -876,11 +959,23 @@ public class ObjectPose
     public Vector3 rotation;
 }
 
+//set object states either by Type or by compatible State
+//"slice all objects of type Apple"
+//"slice all objects that have the sliceable property"
+//also used to randomly do this ie: randomly slice all objects of type apple, randomly slice all objects that have sliceable property
 [Serializable]
-public class ObjectToggle
+public class SetObjectStates
 {
-    public string objectType;
-    public bool isOn;
+    public string objectType = null; //valid strings are any Object Type listed in documentation (ie: AlarmClock, Apple, etc)
+    public string stateChange = null; //valid strings are: openable, toggleable, breakable, canFillWithLiquid, dirtyable, cookable, sliceable, canBeUsedUp
+    public bool isOpen;
+    public bool isToggled;
+    public bool isBroken;
+    public bool isFilledWithLiquid;
+    public bool isDirty;
+    public bool isCooked;
+    public bool isSliced;
+    public bool isUsedUp;
 }
 
 [Serializable]
@@ -980,6 +1075,7 @@ public class ServerAction
 	public string sceneName;
 	public bool rotateOnTeleport;
 	public bool forceVisible;
+    public bool anywhere;//used for SpawnTargetCircle, GetSpawnCoordinatesAboveObject for if anywhere or only in agent view 
 	public bool randomizeOpen;
 	public int randomSeed;
 	public float moveMagnitude;
@@ -1004,19 +1100,20 @@ public class ServerAction
 	public bool allowDecayTemperature = true; //set to true if temperature should decay over time, set to false if temp changes should not decay, defaulted true
 	public string StateChange;//a string that specifies which state change to randomly toggle
     public float timeStep = 0.01f;
-    public ObjectTypeCount[] numRepeats;
-    public ObjectTypeCount[] minFreePerReceptacleType;
+    public float mass;
+    public float drag;
+    public float angularDrag;
+    public ObjectTypeCount[] numDuplicatesOfType; //specify, by object Type, how many duplicates of that given object type to try and spawn
+    
+    //use only the objectType class member to specify which receptacle objects should be excluded from the valid receptacles to spawn objects in
+    public ObjectTypeCount[] excludedReceptacles; 
     public ObjectPose[] objectPoses;
-    public ObjectToggle[] objectToggles;
-    public float noise;
-    public ControllerInitialization controllerInitialization = null;
-    public string agentType;
-    public float agentRadius = 2.0f;
+    public SetObjectStates SetObjectStates;
+
+    public float minDistance;//used in target circle spawning function
+    public float maxDistance;//used in target circle spawning function
+
     public int maxStepCount;
-
-    public float rotateStepDegrees = 90.0f;
-
-    public bool useAgentTransform = false;
 
     public SimObjType ReceptableSimObjType()
 	{

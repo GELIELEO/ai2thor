@@ -281,7 +281,7 @@ namespace UnityStandardAssets.Characters.FirstPerson
 
             if (action.renderDepthImage || action.renderClassImage || action.renderObjectImage || action.renderNormalsImage) 
             {
-    			this.enableImageSynthesis ();
+    			this.updateImageSynthesis(true);
     		}
 
 			if (action.visibilityDistance > 0.0f) {
@@ -492,14 +492,14 @@ namespace UnityStandardAssets.Characters.FirstPerson
             }
         }
 
-		public bool excludeObject(string uniqueId)
+		public bool excludeObject(string objectId)
 		{
-			return Array.IndexOf(this.excludeObjectIds, uniqueId) >= 0;
+			return Array.IndexOf(this.excludeObjectIds, objectId) >= 0;
 		}
 
 		public bool excludeObject(SimpleSimObj so)
 		{
-			return excludeObject(so.UniqueID);
+			return excludeObject(so.ObjectID);
 		}
 
 		protected bool closeSimObj(SimpleSimObj so)
@@ -602,11 +602,12 @@ namespace UnityStandardAssets.Characters.FirstPerson
 			return new SimObj[]{} as SimpleSimObj[];
 		}
 
-		private void enableImageSynthesis() {
-			imageSynthesis = this.gameObject.GetComponentInChildren<ImageSynthesis> () as ImageSynthesis;
-			imageSynthesis.enabled = true;			
+		public void updateImageSynthesis(bool status) {
+            if (this.imageSynthesis == null) {
+                imageSynthesis = this.gameObject.GetComponentInChildren<ImageSynthesis> () as ImageSynthesis;
+            }
+			imageSynthesis.enabled = status;
 		}
-
 
 		public void ProcessControlCommand(ServerAction controlCommand)
 		{

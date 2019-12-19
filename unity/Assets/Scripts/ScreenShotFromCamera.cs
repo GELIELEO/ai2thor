@@ -1,8 +1,9 @@
-﻿ using UnityEngine;
+﻿  
+ using UnityEngine;
  using System.Collections;
  
  public class ScreenShotFromCamera : MonoBehaviour {
-     public int resWidth = 3840; 
+     public int resWidth = 6000; 
      public int resHeight = 2160;
  
      private bool takeHiResShot = false;
