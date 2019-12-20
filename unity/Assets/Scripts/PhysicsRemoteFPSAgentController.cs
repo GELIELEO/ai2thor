@@ -486,38 +486,42 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             gizmobounds.Add(bounding);
             #endif
 
-            //ok now we have a bounds that encapsulates all the colliders of the object, including trigger colliders
-            b.cornerPoints[0,0] = bounding.center.x + bounding.size.x/2f;
-            b.cornerPoints[0,1] = bounding.center.y + bounding.size.y/2f;
-            b.cornerPoints[0,2] = bounding.center.z + bounding.size.z/2f;
+            //coordinates for corners is now done on the Python side, all the AxisalignedBoundingBox should return is the center and size
+            // from ai2thor.util.bounding_boxes import get_corners
+            // corners = get_corners(box)
 
-            b.cornerPoints[1,0] = bounding.center.x + bounding.size.x/2f;
-            b.cornerPoints[1,1] = bounding.center.y + bounding.size.y/2f;
-            b.cornerPoints[1,2] = bounding.center.z - bounding.size.z/2f;
+            // //ok now we have a bounds that encapsulates all the colliders of the object, including trigger colliders
+            // b.cornerPoints[0,0] = bounding.center.x + bounding.size.x/2f;
+            // b.cornerPoints[0,1] = bounding.center.y + bounding.size.y/2f;
+            // b.cornerPoints[0,2] = bounding.center.z + bounding.size.z/2f;
+
+            // b.cornerPoints[1,0] = bounding.center.x + bounding.size.x/2f;
+            // b.cornerPoints[1,1] = bounding.center.y + bounding.size.y/2f;
+            // b.cornerPoints[1,2] = bounding.center.z - bounding.size.z/2f;
             
-            b.cornerPoints[2,0] = bounding.center.x + bounding.size.x/2f;
-            b.cornerPoints[2,1] = bounding.center.y - bounding.size.y/2f;
-            b.cornerPoints[2,2] = bounding.center.z + bounding.size.z/2f;
+            // b.cornerPoints[2,0] = bounding.center.x + bounding.size.x/2f;
+            // b.cornerPoints[2,1] = bounding.center.y - bounding.size.y/2f;
+            // b.cornerPoints[2,2] = bounding.center.z + bounding.size.z/2f;
 
-            b.cornerPoints[3,0] = bounding.center.x + bounding.size.x/2f;
-            b.cornerPoints[3,1] = bounding.center.y - bounding.size.y/2f;
-            b.cornerPoints[3,2] = bounding.center.z - bounding.size.z/2f;
+            // b.cornerPoints[3,0] = bounding.center.x + bounding.size.x/2f;
+            // b.cornerPoints[3,1] = bounding.center.y - bounding.size.y/2f;
+            // b.cornerPoints[3,2] = bounding.center.z - bounding.size.z/2f;
 
-            b.cornerPoints[4,0] = bounding.center.x - bounding.size.x/2f;
-            b.cornerPoints[4,1] = bounding.center.y + bounding.size.y/2f;
-            b.cornerPoints[4,2] = bounding.center.z + bounding.size.z/2f;
+            // b.cornerPoints[4,0] = bounding.center.x - bounding.size.x/2f;
+            // b.cornerPoints[4,1] = bounding.center.y + bounding.size.y/2f;
+            // b.cornerPoints[4,2] = bounding.center.z + bounding.size.z/2f;
     
-            b.cornerPoints[5,0] = bounding.center.x - bounding.size.x/2f;
-            b.cornerPoints[5,1] = bounding.center.y + bounding.size.y/2f;
-            b.cornerPoints[5,2] = bounding.center.z - bounding.size.z/2f;
+            // b.cornerPoints[5,0] = bounding.center.x - bounding.size.x/2f;
+            // b.cornerPoints[5,1] = bounding.center.y + bounding.size.y/2f;
+            // b.cornerPoints[5,2] = bounding.center.z - bounding.size.z/2f;
 
-            b.cornerPoints[6,0] = bounding.center.x - bounding.size.x/2f;
-            b.cornerPoints[6,1] = bounding.center.y - bounding.size.y/2f;
-            b.cornerPoints[6,2] = bounding.center.z + bounding.size.z/2f;
+            // b.cornerPoints[6,0] = bounding.center.x - bounding.size.x/2f;
+            // b.cornerPoints[6,1] = bounding.center.y - bounding.size.y/2f;
+            // b.cornerPoints[6,2] = bounding.center.z + bounding.size.z/2f;
 
-            b.cornerPoints[7,0] = bounding.center.x - bounding.size.x/2f;
-            b.cornerPoints[7,1] = bounding.center.y - bounding.size.y/2f;
-            b.cornerPoints[7,2] = bounding.center.z - bounding.size.z/2f;
+            // b.cornerPoints[7,0] = bounding.center.x - bounding.size.x/2f;
+            // b.cornerPoints[7,1] = bounding.center.y - bounding.size.y/2f;
+            // b.cornerPoints[7,2] = bounding.center.z - bounding.size.z/2f;
 
             b.center = bounding.center;//also return the center of this bounding box in world coordinates
             b.size = bounding.size;//also return the size in the x, y, z axes of the bounding box in world coordinates

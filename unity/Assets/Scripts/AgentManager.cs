@@ -895,10 +895,14 @@ public class ObjectMetadata
 [Serializable]
 public class AxisAlignedBoundingBox
 {
+    //note: coordinates of 8 corners is now handled on the python side via:
+    // from ai2thor.util.bounding_boxes import get_corners
+    // corners = get_corners(box)
+
     //8 corners of the world axis aligned box that bounds a sim object
     //8 rows - 8 corners, one per row
     //3 columns - x, y, z of each corner respectively
-    public float[,] cornerPoints = new float[8,3];
+    //public float[,] cornerPoints = new float[8,3];
 
     //center of the bounding box of this object in worldspace coordinates
     public Vector3 center;
