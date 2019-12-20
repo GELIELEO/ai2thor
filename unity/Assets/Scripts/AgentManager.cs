@@ -1112,8 +1112,15 @@ public class ServerAction
 
     public float minDistance;//used in target circle spawning function
     public float maxDistance;//used in target circle spawning function
-
+    public float noise;
+    public ControllerInitialization controllerInitialization = null;
+    public string agentType;
+    public float agentRadius = 2.0f;
     public int maxStepCount;
+
+    public float rotateStepDegrees = 90.0f;
+
+    public bool useAgentTransform = false;
 
     public SimObjType ReceptableSimObjType()
 	{

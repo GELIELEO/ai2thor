@@ -7215,7 +7215,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
 
                     var visibleSimObjects = this.GetAllVisibleSimObjPhysics(this.maxVisibleDistance);
                     transform.rotation = rot;
-                    if (visibleSimObjects.Any(sop => sop.uniqueID == targetSOP.uniqueID)) {
+                    if (visibleSimObjects.Any(sop => sop.objectID == targetSOP.objectID)) {
                         pos = p;
                         return true;
                     }
@@ -9161,7 +9161,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
         }
 
         public void GetShortestPath(ServerAction action) {
-            SimObjPhysics sop = physicsSceneManager.UniqueIdToSimObjPhysics[action.objectId];
+            SimObjPhysics sop = physicsSceneManager.ObjectIdToSimObjPhysics[action.objectId];
             if (sop == null) {
                 errorMessage = "Cannot find sim object with id '" + action.objectId + "'";
                 actionFinished(false);
@@ -9187,9 +9187,9 @@ namespace UnityStandardAssets.Characters.FirstPerson {
             try {
                 SimObjType objectType = (SimObjType) Enum.Parse(typeof(SimObjType), action.objectType, true);
                 List<string> objectIds = new List<string>();
-                foreach (var s in physicsSceneManager.UniqueIdToSimObjPhysics) {
+                foreach (var s in physicsSceneManager.ObjectIdToSimObjPhysics) {
                     if (s.Value.ObjType == objectType) {
-                        objectIds.Add(s.Value.uniqueID);
+                        objectIds.Add(s.Value.objectID);
                     }
                 }
                 actionFinished(true, objectIds.ToArray());
@@ -9215,7 +9215,7 @@ namespace UnityStandardAssets.Characters.FirstPerson {
                 agentTransform.LookAt(targetPosition);
 
                 var visibleSimObjects = PhysicsController.GetAllVisibleSimObjPhysics(PhysicsController.maxVisibleDistance);
-                if (visibleSimObjects.Any(sop => sop.uniqueID == targetSimObjectId)) {
+                if (visibleSimObjects.Any(sop => sop.objectID == targetSimObjectId)) {
                     fixedPosition = pos;
                     //success = true;
                     break;
